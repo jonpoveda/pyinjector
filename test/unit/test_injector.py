@@ -9,8 +9,8 @@ import toml
 
 from injector import inject
 
-TMP_DIR: Path = Path(__file__).absolute().parents[1].joinpath('test_tmp')
-ASSETS_DIR: Path = Path(__file__).absolute().parent.joinpath('assets')
+TMP_DIR: Path = Path(__file__).absolute().parents[2].joinpath('test_tmp')
+ASSETS_DIR: Path = Path(__file__).absolute().parents[1].joinpath('assets')
 
 
 class TestInjector(unittest.TestCase):
