@@ -10,7 +10,7 @@ from typing import Iterable
 import toml
 
 
-def parse(deps: Dict[str, Any]) -> Iterable:
+def parse_lock(deps: Dict[str, Any]) -> Iterable:
     """ Formats Pipenv dependencies for Flit
 
     Formats 'Pipfile.lock' dependencies as expected for Flit's 'pyproject.toml'
@@ -30,11 +30,15 @@ def parse(deps: Dict[str, Any]) -> Iterable:
             for package, value in deps.items()]
 
 
+def parse_pipfile(deps: Dict[str, Any]) -> Iterable:
+    pass
+
+
 def inject(pipfile: Path, project_config: Path, safe: bool):
     with pipfile.open('r') as infile:
         data = json.load(infile)
-        deps = parse(data['default'])
-        deps_dev = parse(data['develop'])
+        deps = parse_lock(data['default'])
+        deps_dev = parse_lock(data['develop'])
 
     with project_config.open('r') as original_config:
         config = toml.load(original_config)
