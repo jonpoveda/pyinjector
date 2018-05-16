@@ -9,13 +9,7 @@ from typing import Tuple
 import toml
 
 
-def format(deps: dict) -> Iterable:
-    """ Formats a dictionary into a TOML list of packages """
-    return [f'{package} ({value.get("version")})'
-            for package, value in deps.items()]
-
-
-def inject(deps: Iterable, deps_dev: Iterable, config_file: Path) -> None:
+def inject(deps: Iterable, deps_dev: Iterable, file: Path) -> None:
     """ Replaces dependencies from a Flit's configuration file
 
     Args:
@@ -23,12 +17,12 @@ def inject(deps: Iterable, deps_dev: Iterable, config_file: Path) -> None:
          deps_dev: dependencies for dev
          file: Flit's configuration file (`pyproject.toml`)
     """
-    with config_file.open('r') as original_config:
-        config = toml.load(original_config)
+    with file.open('r') as config_file:
+        config = toml.load(config_file)
         config['tool']['flit']['metadata']['requires'] = deps
         config['tool']['flit']['metadata']['dev-requires'] = deps_dev
 
-    with config_file.open('w') as outfile:
+    with file.open('w') as outfile:
         toml.dump(config, outfile)
 
 
@@ -53,6 +47,12 @@ def parse_lock(file: Path) -> Tuple[Iterable, Iterable]:
     .. _Flit:
         https://pypi.org/project/flit/
     """
+
+    def format(deps: dict) -> Iterable:
+        """ Formats a dictionary into a TOML list of packages """
+        return [f'{package} ({value.get("version")})'
+                for package, value in deps.items()]
+
     with file.open('r') as infile:
         data = json.load(infile)
         deps = format(data['default'])
@@ -61,12 +61,51 @@ def parse_lock(file: Path) -> Tuple[Iterable, Iterable]:
     return deps, deps_dev
 
 
+def parse_pipfile(file: Path) -> Tuple[Iterable, Iterable]:
+    """ Formats Pipenv dependencies for Flit
+
+    Formats `Pipfile` dependencies as expected for Flit's `pyproject.toml`
+
+    Args:
+        file: path to a `Pipfile`
+
+    Returns:
+        two dependency lists
+
+    See also:
+        `PEP 518`_, `Pipenv`_ , `Flit`_
+
+    .. _PEP 518:
+        https://www.python.org/dev/peps/pep-0518/
+    .. _Pipenv:
+        http://pipenv.readthedocs.io/en/latest/
+    .. _Flit:
+        https://pypi.org/project/flit/
+    """
+
+    def format(deps: dict) -> Iterable:
+        """ Formats a dictionary into a TOML list of packages """
+        return [f'{package} ({value})'
+                for package, value in deps.items()]
+
+    with file.open('r') as config_file:
+        config = toml.load(config_file)
+        deps = format(config['packages'])
+        dev_deps = format(config['dev-packages'])
+
+    return deps, dev_deps
+
+
 def main():
     # Get parameters from arguments
     parser = argparse.ArgumentParser(description='Python dependency injector')
-    parser.add_argument('-l', '--lock',
-                        type=Path, default=Path('Pipfile.lock'),
-                        help='path to Pipfile.lock file')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-l', '--lock',
+                       type=Path, default=None,
+                       help='path to Pipfile.lock file')
+    group.add_argument('-p', '--pipfile',
+                       type=Path, default=None,
+                       help='path to Pipfile')
     parser.add_argument('-c', '--config',
                         type=Path, default=Path('pyproject.toml'),
                         help="path to Flit's config file path")
@@ -75,7 +114,17 @@ def main():
                         help="set to not overwrite Flit's config file")
     arguments = parser.parse_args()
 
-    prod_deps, dev_deps = parse_lock(Path(arguments.lock))
+    if arguments.lock:
+        prod_deps, dev_deps = parse_lock(Path(arguments.lock))
+
+    elif arguments.pipfile:
+        prod_deps, dev_deps = parse_pipfile(Path(arguments.pipfile))
+
+    else:
+        try:
+            prod_deps, dev_deps = parse_lock(Path('Pipfile.lock'))
+        except FileNotFoundError:
+            prod_deps, dev_deps = parse_pipfile(Path('Pipfile'))
 
     if arguments.safe:
         print(f'The extracted project dependencies are: \n'
@@ -84,7 +133,7 @@ def main():
               f'{dev_deps}')
 
     else:
-        inject(prod_deps, dev_deps, config_file=Path(arguments.config))
+        inject(prod_deps, dev_deps, file=Path(arguments.config))
 
 
 if __name__ == '__main__':

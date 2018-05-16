@@ -1,0 +1,11 @@
+[build-system]
+requires = ["flit"]
+build-backend = "flit.buildapi"
+
+[tool.flit.metadata]
+module = "module_name"
+author = "author_name"
+author-email = "author@email.com"
+home-page = "http://home.page"
+requires = ['toml (~=0.9.4)', 'argparse (~=1.4.0)']
+dev-requires = ['pylint (~=1.8.4)', 'pre-commit (~=1.8.2)']
