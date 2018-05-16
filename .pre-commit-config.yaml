@@ -1,0 +1,43 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  sha: v1.2.0
+  hooks:
+  # Mandatory
+  - id: check-added-large-files
+    args: ['--maxkb=40']
+  - id: check-ast
+  - id: check-builtin-literals
+  - id: check-byte-order-marker
+  - id: check-docstring-first
+  - id: check-json
+  - id: check-merge-conflict
+  - id: detect-private-key
+  - id: double-quote-string-fixer
+  - id: end-of-file-fixer
+  - id: fix-encoding-pragma
+  - id: mixed-line-ending
+    args: ['--fix=lf']
+  - id: name-tests-test
+  - id: no-commit-to-branch
+    args: ['-b master']
+  - id: trailing-whitespace
+
+  # Optional
+  - id: check-xml
+  - id: check-yaml
+  - id: sort-simple-yaml
+  - id: pretty-format-json
+    args: ['--autofix']
+  - id: autopep8-wrapper
+
+- repo: https://github.com/Botpy/pre-commit-pylint.git
+  sha: v0.0.3
+  hooks:
+  - id: pylint-py3k
+  - id: pylint-score-limit
+    args: ['--limit=9', '--rcfile=./.pylintrc']
+
+- repo: https://github.com/pre-commit/mirrors-isort
+  sha: b6eeefa49676533c38196dda073f05c45de42b59  # Use the sha / tag you want to point at
+  hooks:
+  - id: isort
