@@ -2,32 +2,39 @@
 """ Flint dependency injector from Pipenv for Python """
 import argparse
 import json
+from collections import namedtuple
 from pathlib import Path
 from typing import Iterable
 from typing import Tuple
 
 import toml
 
+Dependencies: Tuple[Iterable, Iterable] = \
+    namedtuple('Dependencies', ['prod', 'dev'])
 
-def inject(deps: Iterable, deps_dev: Iterable, file: Path) -> None:
+
+def inject(deps: Dependencies, file: Path) -> None:
     """ Replaces dependencies from a Flit's configuration file
 
     Args:
          deps: dependencies for prod
          deps_dev: dependencies for dev
          file: Flit's configuration file (`pyproject.toml`)
+
+    See also:
+        ``parse_lock`` and ``parse_pipfile`` functions to extract dependencies
     """
     with file.open('r') as config_file:
         config = toml.load(config_file)
-        config['tool']['flit']['metadata']['requires'] = deps
-        config['tool']['flit']['metadata']['dev-requires'] = deps_dev
+        config['tool']['flit']['metadata']['requires'] = deps.prod
+        config['tool']['flit']['metadata']['dev-requires'] = deps.dev
 
     with file.open('w') as outfile:
         toml.dump(config, outfile)
 
 
-def parse_lock(file: Path) -> Tuple[Iterable, Iterable]:
-    """ Formats Pipenv dependencies for Flit
+def parse_lock(file: Path) -> Dependencies:
+    """ Extracts `Pipenv` dependencies for `Flit` using `Pipfile.lock`
 
     Formats `Pipfile.lock` dependencies as expected for Flit's `pyproject.toml`
 
@@ -48,21 +55,19 @@ def parse_lock(file: Path) -> Tuple[Iterable, Iterable]:
         https://pypi.org/project/flit/
     """
 
-    def format(deps: dict) -> Iterable:
+    def formatter(deps: dict) -> Iterable:
         """ Formats a dictionary into a TOML list of packages """
         return [f'{package} ({value.get("version")})'
                 for package, value in deps.items()]
 
     with file.open('r') as infile:
         data = json.load(infile)
-        deps = format(data['default'])
-        deps_dev = format(data['develop'])
-
-    return deps, deps_dev
+        return Dependencies(prod=formatter(data['default']),
+                            dev=formatter(data['develop']))
 
 
-def parse_pipfile(file: Path) -> Tuple[Iterable, Iterable]:
-    """ Formats Pipenv dependencies for Flit
+def parse_pipfile(file: Path) -> Dependencies:
+    """ Extracts `Pipenv` dependencies for `Flit` using `Pipfile`
 
     Formats `Pipfile` dependencies as expected for Flit's `pyproject.toml`
 
@@ -83,17 +88,15 @@ def parse_pipfile(file: Path) -> Tuple[Iterable, Iterable]:
         https://pypi.org/project/flit/
     """
 
-    def format(deps: dict) -> Iterable:
+    def formatter(deps: dict) -> Iterable:
         """ Formats a dictionary into a TOML list of packages """
         return [f'{package} ({value})'
                 for package, value in deps.items()]
 
     with file.open('r') as config_file:
         config = toml.load(config_file)
-        deps = format(config['packages'])
-        dev_deps = format(config['dev-packages'])
-
-    return deps, dev_deps
+        return Dependencies(prod=formatter(config['packages']),
+                            dev=formatter(config['dev-packages']))
 
 
 def main():
@@ -115,25 +118,25 @@ def main():
     arguments = parser.parse_args()
 
     if arguments.lock:
-        prod_deps, dev_deps = parse_lock(Path(arguments.lock))
+        deps = parse_lock(arguments.lock)
 
     elif arguments.pipfile:
-        prod_deps, dev_deps = parse_pipfile(Path(arguments.pipfile))
+        deps = parse_pipfile(arguments.pipfile)
 
     else:
         try:
-            prod_deps, dev_deps = parse_lock(Path('Pipfile.lock'))
+            deps = parse_lock(file=Path('Pipfile.lock'))
         except FileNotFoundError:
-            prod_deps, dev_deps = parse_pipfile(Path('Pipfile'))
+            deps = parse_pipfile(file=Path('Pipfile'))
 
     if arguments.safe:
         print(f'The extracted project dependencies are: \n'
-              f'{prod_deps}\n'
+              f'{deps.prod}\n'
               f'and for develop are: \n'
-              f'{dev_deps}')
+              f'{deps.dev}')
 
     else:
-        inject(prod_deps, dev_deps, file=Path(arguments.config))
+        inject(deps, file=Path(arguments.config))
 
 
 if __name__ == '__main__':

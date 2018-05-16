@@ -7,6 +7,7 @@ from shutil import rmtree
 
 import toml
 
+from injector import Dependencies
 from injector import inject
 
 TMP_DIR: Path = Path(__file__).absolute().parents[2].joinpath('test_tmp')
@@ -29,16 +30,16 @@ class TestInjector(unittest.TestCase):
         copy(ASSETS_DIR.joinpath('Pipfile.lock'), pipfile_path)
         copy(ASSETS_DIR.joinpath('pyproject.toml'), pyproject_path)
 
-        deps = ['argparse (==1.4.0)', 'toml (==0.9.4)']
-        dev_deps = ['aspy.yaml (==1.1.1)', 'astroid (==1.6.3)',
-                    'cached-property (==1.4.2)', 'cfgv (==1.0.0)',
-                    'identify (==1.0.16)', 'isort (==4.3.4)',
-                    'lazy-object-proxy (==1.3.1)', 'mccabe (==0.6.1)',
-                    'nodeenv (==1.3.0)', 'pre-commit (==1.8.2)',
-                    'pylint (==1.8.4)', 'pyyaml (==3.12)', 'six (==1.11.0)',
-                    'virtualenv (==15.2.0)', 'wrapt (==1.10.11)']
-
-        inject(deps, dev_deps, pyproject_path)
+        deps = Dependencies(
+            prod=['argparse (==1.4.0)', 'toml (==0.9.4)'],
+            dev=['aspy.yaml (==1.1.1)', 'astroid (==1.6.3)',
+                 'cached-property (==1.4.2)', 'cfgv (==1.0.0)',
+                 'identify (==1.0.16)', 'isort (==4.3.4)',
+                 'lazy-object-proxy (==1.3.1)', 'mccabe (==0.6.1)',
+                 'nodeenv (==1.3.0)', 'pre-commit (==1.8.2)',
+                 'pylint (==1.8.4)', 'pyyaml (==3.12)', 'six (==1.11.0)',
+                 'virtualenv (==15.2.0)', 'wrapt (==1.10.11)'])
+        inject(deps, pyproject_path)
 
         with pyproject_reference.open('r') as expected_file, \
                 pyproject_path.open('r') as infile:
@@ -57,10 +58,10 @@ class TestInjector(unittest.TestCase):
         copy(ASSETS_DIR.joinpath('Pipfile'), pipfile_path)
         copy(ASSETS_DIR.joinpath('pyproject.toml'), pyproject_path)
 
-        deps = ['toml (~=0.9.4)', 'argparse (~=1.4.0)']
-        dev_deps = ['pylint (~=1.8.4)', 'pre-commit (~=1.8.2)']
-
-        inject(deps, dev_deps, pyproject_path)
+        deps = Dependencies(
+            prod=['toml (~=0.9.4)', 'argparse (~=1.4.0)'],
+            dev=['pylint (~=1.8.4)', 'pre-commit (~=1.8.2)'])
+        inject(deps, pyproject_path)
 
         with pyproject_reference.open('r') as expected_file, \
                 pyproject_path.open('r') as infile:
