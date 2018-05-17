@@ -23,7 +23,7 @@ pipenv shell
 Run the tool as an script:
 
 ```sh
-python pynjector/injector
+python -m pynjector.injector -p Pipfile
 ```
 
 You can add the argument `-h` to check for options.
